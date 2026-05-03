@@ -1,0 +1,271 @@
+openapi: 3.0.0
+info:
+  title: Computer Shop API
+  description: API для управления товарами магазина компьютеров и комплектующих.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8181
+
+tags:
+  - name: Products
+
+paths:
+  /api/products:
+    get:
+      summary: Получить все товары по типу
+      description: Возвращает список товаров заданного типа. Допустимые типы - DESKTOP, LAPTOP, MONITOR, HARD_DRIVE.
+      parameters:
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - DESKTOP
+              - LAPTOP
+              - MONITOR
+              - HARD_DRIVE
+          example: DESKTOP
+      responses:
+        '200':
+          description: Успешный возврат списка товаров
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      tags:
+        - Products
+
+    post:
+      summary: Добавить новый товар
+      description: Создаёт товар любого типа (DESKTOP, LAPTOP, MONITOR, HARD_DRIVE).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductDto'
+            example:
+              type: "DESKTOP"
+              serialNumber: "D-001"
+              manufacturer: "Dell"
+              price: 899.99
+              quantity: 15
+              formFactor: "DESKTOP"
+      responses:
+        '201':
+          description: Товар успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Конфликт данных (например, дубликат серийного номера)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessageResponse'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      tags:
+        - Products
+
+  /api/products/{id}:
+    get:
+      summary: Получить товар по ID
+      description: Возвращает один товар по его идентификатору.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          example: 1
+      responses:
+        '200':
+          description: Товар найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      tags:
+        - Products
+
+    put:
+      summary: Обновить товар
+      description: Обновляет все поля существующего товара по идентификатору. Тип товара не может быть изменён.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductDto'
+            example:
+              type: "DESKTOP"
+              serialNumber: "D-001-v2"
+              manufacturer: "Dell Inc."
+              price: 799.99
+              quantity: 10
+              formFactor: "NETTOP"
+      responses:
+        '200':
+          description: Товар успешно обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      tags:
+        - Products
+
+components:
+  schemas:
+    ProductDto:
+      type: object
+      description: Объект товара. Тип определяется полем type, специфические поля зависят от типа.
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Идентификатор товара (генерируется сервером, только для чтения)
+        type:
+          type: string
+          enum:
+            - DESKTOP
+            - LAPTOP
+            - MONITOR
+            - HARD_DRIVE
+          description: Тип товара
+        serialNumber:
+          type: string
+          description: Серийный номер (уникальный)
+        manufacturer:
+          type: string
+          description: Производитель
+        price:
+          type: number
+          format: decimal
+          description: Цена товара
+        quantity:
+          type: integer
+          description: Количество единиц на складе
+        formFactor:
+          type: string
+          enum:
+            - DESKTOP
+            - NETTOP
+            - ALL_IN_ONE
+          description: Форм-фактор (только для DESKTOP)
+        screenSize:
+          type: integer
+          description: Размер экрана в дюймах (только для LAPTOP)
+          example: 14
+        diagonal:
+          type: number
+          format: double
+          description: Диагональ в дюймах (только для MONITOR)
+          example: 27.0
+        capacity:
+          type: integer
+          description: Объём в ГБ (только для HARD_DRIVE)
+          example: 1000
+      required:
+        - type
+        - serialNumber
+        - manufacturer
+        - price
+        - quantity
+      example:
+        id: 1
+        type: "DESKTOP"
+        serialNumber: "D-001"
+        manufacturer: "Dell"
+        price: 899.99
+        quantity: 15
+        formFactor: "DESKTOP"
+
+    ErrorMessageResponse:
+      type: object
+      description: Объект ошибки, возвращаемый в случае возникновения на сервере ошибки.
+      required:
+        - message
+        - detailedMessage
+        - dateTime
+      properties:
+        message:
+          type: string
+          description: Человеко-читаемое сообщение об ошибке
+        detailedMessage:
+          type: string
+          description: Более детальное сообщение об ошибке. Например, содержимое exception
+        dateTime:
+          type: string
+          format: date-time
+          description: Дата и время возникновения ошибки. Формат "YYYY-MM-DDThh:mm:ss"
+      example:
+        message: "Товар не найден"
+        detailedMessage: "Товар с id=999 не найден"
+        dateTime: "2026-05-03T23:30:00"
+
+  responses:
+    BadRequest:
+      description: Запрос с невалидными данными.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessageResponse'
+          example:
+            message: "Ошибка валидации"
+            detailedMessage: "serialNumber: Серийный номер обязателен; price: Цена должна быть положительной"
+            dateTime: "2026-05-03T23:30:00"
+
+    NotFound:
+      description: Сущность не найдена.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessageResponse'
+          example:
+            message: "Товар не найден"
+            detailedMessage: "Товар с id=999 не найден"
+            dateTime: "2026-05-03T23:30:00"
+
+    ServerError:
+      description: Внутренняя ошибка сервера
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessageResponse'
+          example:
+            message: "Внутренняя ошибка сервера"
+            detailedMessage: "Более детальное сообщение об ошибке"
+            dateTime: "2026-05-03T23:30:00"
