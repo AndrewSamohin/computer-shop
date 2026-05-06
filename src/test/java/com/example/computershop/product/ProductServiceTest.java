@@ -85,13 +85,4 @@ public class ProductServiceTest {
         verify(productMapper).toDto(desktopComputer);
     }
 
-    @Test
-    void shouldAddProduct_butActuallyTestsNothing() {
-        ProductDto dto = new ProductDto();
-
-        ProductDto result = productService.addProduct(dto);
-
-        assertThat(result).isNotNull();
-    }
-
 }
