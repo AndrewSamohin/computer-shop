@@ -1,0 +1,35 @@
+name: cd
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install sshpass
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+
+      - name: Deploy to VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          sshpass -p "$VPS_PASSWORD" ssh \
+            -o StrictHostKeyChecking=no \
+            "$VPS_USER@$VPS_HOST" "
+              cd /opt/my-service &&
+              docker compose pull &&
+              docker compose up -d --force-recreate
+            "
+
+      - name: Health check
+        run: |
+          curl --fail --retry 10 --retry-delay 3 \
+            http://${{ secrets.VPS_HOST }}/health
